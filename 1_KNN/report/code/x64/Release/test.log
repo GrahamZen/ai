@@ -1,0 +1,68 @@
+﻿  classification.h
+E:\workspace\ai\1_KNN\report\code\classification.h(105,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(139,29): warning C4244: “=”: 从“__int64”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(238,42): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+  impl.cpp
+E:\workspace\ai\1_KNN\report\code\classification.h(105,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(139,29): warning C4244: “=”: 从“__int64”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(238,42): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(81,23): warning C4244: “初始化”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(83,29): warning C4244: “=”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(124,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(167,29): warning C4244: “=”: 从“__int64”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(265,42): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(65,23): warning C4244: “初始化”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(55): message : 查看对正在编译的函数 模板 实例化“float KNN_REGRESSION::sentence::COR<6>(const std::array<float,6> &,const std::array<float,6> &)”的引用
+E:\workspace\ai\1_KNN\report\code\reggression.h(67,29): warning C4244: “=”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(306,1): warning C4267: “初始化”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\impl.cpp(165): message : 查看对正在编译的函数 模板 实例化“float KNN_REGRESSION::fullCOR<6>(const std::vector<std::array<float,6>,std::allocator<std::array<float,6>>> &,const std::vector<std::array<float,6>,std::allocator<std::array<float,6>>> &)”的引用
+  main.cpp
+E:\workspace\ai\1_KNN\report\code\classification.h(105,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(139,29): warning C4244: “=”: 从“__int64”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\classification.h(238,42): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(81,23): warning C4244: “初始化”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(83,29): warning C4244: “=”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(124,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(167,29): warning C4244: “=”: 从“__int64”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(265,42): warning C4244: “参数”: 从“int”转换到“float”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\main.cpp(77,1): warning C4267: “=”: 从“size_t”转换到“int”，可能丢失数据
+E:\workspace\ai\1_KNN\report\code\reggression.h(65,23): warning C4244: “初始化”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+E:\workspace\ai\1_KNN\report\code\reggression.h(55): message : 查看对正在编译的函数 模板 实例化“float KNN_REGRESSION::sentence::COR<6>(const std::array<float,6> &,const std::array<float,6> &)”的引用
+E:\workspace\ai\1_KNN\report\code\reggression.h(67,29): warning C4244: “=”: 从“_Ty”转换到“float”，可能丢失数据
+          with
+          [
+              _Ty=double
+          ]
+  正在生成代码
+  Previous IPDB not found, fall back to full compilation.
+  All 1198 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  test.vcxproj -> E:\workspace\ai\1_KNN\report\code\x64\Release\test.exe
