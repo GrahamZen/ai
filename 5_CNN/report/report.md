@@ -104,11 +104,11 @@ class lenet5(nn.Module):
 
 ResNet方法提出，若拟合的函数是$F(x)$，潜在的映射是$H(x)$，让拟合的函数学习$H(x)-x$比直接学习$H(x)$更简单。尤其是对于较深的网络，使用relu可以保证冗余层不会导致模型的性能更糟，而如果冗余层提取到了特征，则模型的性能会提升。
 
-![image-20201110182646006](E:\workspace\ai\5_CNN\report\report.assets\image-20201110182646006.png)
+![../_images/resnet-block.svg](E:\workspace\ai\5_CNN\report\report.assets\resnet-block.svg)
 
 上图是普通的残差块，注意为了使得$F(x)+x$能够符合矩阵的加法条件，x需要经过处理，将通道数统一为$F(x)$的。
 
-残差块继承nn.Moudle类
+残差块继承nn.Moudle类，
 
 ```python
 def conv3x3(in_channels, out_channels, stride=1):
@@ -145,6 +145,10 @@ class ResidualBlock(nn.Module):
 ResNet论文中提及的种类如下，我使用的是ResNet18。
 
 ![image-20201110223059747](E:\workspace\ai\5_CNN\report\report.assets\image-20201110223059747.png)
+
+完整的ResNet结构如下：
+
+![../_images/resnet18.svg](E:\workspace\ai\5_CNN\report\report.assets\resnet18.svg)
 
 实现堆叠出残差块组的make_layer函数，就可以写出ResNet了，我只实现了18和34版本的，训练使用ResNet18。
 
@@ -190,7 +194,7 @@ def ResNet34():
     return ResNet(ResidualBlock,[3,4,6,3])
 ```
 
-注意因为cifar-10训练集的图片大小是32*32的，在最后的平均池化层会变为1\*1，这样实际上损失了非常多的信息，因此在开始时可以不使用7\*7的卷积核和最大池化，而是使用更小的卷积核，不进行池化，最后的平均池化层可以使用更小的。
+注意因为cifar-10训练集的图片大小是32*32的，在最后的平均池化层会变为1\*1，这样实际上损失了非常多的信息，因此在开始时可以不使用7\*7的卷积核和最大池化，而是使用更小的卷积核比如3\*3，而且不进行池化，最后的平均池化层也可以使用更小的，比如4\*4。
 
 ### 结果分析
 
@@ -227,27 +231,24 @@ Test set: Average loss: 0.9699, Accuracy: 6634/10000 (66%)
 下面是一些测试结果，可以看到，
 
 <center class="half">
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201110164057199.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201110164038201.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163704069.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163746759.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163821574.png" width="300"/>
 </center>
-
-
-
-
 
 LeNet-5预测错误的，肉眼也比较难识别，因为特征不够明显。
 
 训练的过程中，loss和accuracy变化如下：
 
-![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet.svg)
+![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605093344355.svg)
 
 使用dropout后，变化如下：
 
 ![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605075254101.svg)
 
-变化非常明显，准确率和loss的下降都非常快。
+变化非常明显，准确率和loss的下降都非常快，但是最终准确率没有明显提升。
 
-使用批正则化后，变化如下：
+使用批规范化后，变化如下：
 
 ![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605080639391.svg)
 
@@ -255,7 +256,7 @@ LeNet-5预测错误的，肉眼也比较难识别，因为特征不够明显。
 
 修改卷积核的大小也会影响训练，将第一个卷积核的size设置为11，padding=5，训练时变化如下：
 
-![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605067668473.svg)
+![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605085096208.svg)
 
 可以看到loss下降的速度也变快了，说明学习图像的大面积的特征有利于提高准确率，但是准确率依然是66%左右，应该是受限于网络的结构。
 
@@ -377,11 +378,10 @@ Test set: Average loss: 0.4529, Accuracy: 9203/10000 (92%)
 下面是一些例子，
 
 <center class="half">
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201110233911561.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201110234415423.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160131922.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160209488.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160241232.png" width="300"/>    
 </center>
-
-
 
 可以看到，LeNet-5预测错误的，ResNet基本没有预测错，准确率是非常高的。
 
@@ -395,7 +395,7 @@ Test set: Average loss: 0.4529, Accuracy: 9203/10000 (92%)
 
 #### 数据增强
 
-只使用数据集中的原数据训练效果并不是很好，数据增强对数据进行预处理，可以增强其特征便于模型的学习。我使用了随机裁剪，翻转，和张量的归一化。
+只使用数据集中的原数据训练效果并不是很好，数据增强对数据进行预处理，可以增强其特征便于模型的学习。我使用了随机裁剪，翻转，和张量的归一化，使用的参数参考的是效果比较好的模型。
 
 ```python
 transform_train = transforms.Compose([
@@ -406,7 +406,7 @@ transform_train = transforms.Compose([
 ])
 ```
 
-使用数据增强前，100个epoch时，ResNet只有60%，LeNet只有30%。而经过数据增强，100个epoch内，ResNet达到90%,LeNet达到60%。因此上面的所有结果均使用了数据增强。
+使用数据增强前，100个epoch时，ResNet只有60%，LeNet只有30%。而经过数据增强，100个epoch内，ResNet达到90%,LeNet达到66%。因此上面的所有结果均使用了数据增强。
 
 #### dropout
 
