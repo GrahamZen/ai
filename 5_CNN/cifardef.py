@@ -13,7 +13,6 @@ import numpy as np
 import sys
 # loader and tester definition
 
-
 class cifar_10(torch.utils.data.Dataset):
     def __init__(self, root, train=False, transform=None, target_transform=None, index=1):
         if train == True:
@@ -75,11 +74,15 @@ def show_from_tensor(tensor, title=None):
     plt.pause(0.001)
 
 
-def test_visual(model, test_dataset, meta_data):
-    test_loader = DataLoader(test_dataset, shuffle=False)
+def test_visual(model, test_dataset_file, meta_data, transform=None):
+    model.eval()
+    test_loader = DataLoader(
+        cifar_10(test_dataset_file, train=False, transform=transform), shuffle=False)
+    test_loader_origin = DataLoader(cifar_10(
+        test_dataset_file, train=False, transform=transforms.ToTensor()), shuffle=False)
     if torch.cuda.is_available():
         model = model.cuda()
-    for data in test_loader:
+    for data, origin_data in zip(test_loader, test_loader_origin):
         img, label = data
         if torch.cuda.is_available():
             img = Variable(img).cuda()
@@ -87,19 +90,20 @@ def test_visual(model, test_dataset, meta_data):
         else:
             img = Variable(img)
             label = Variable(label)
-        out = model(img)
+        with torch.no_grad():
+            out = model(img)
         _, pred = torch.max(out, 1)
-        show_from_tensor(img)
+        show_from_tensor(origin_data[0])
         print(meta_data[b'label_names'][pred], ',',
               meta_data[b'label_names'][label])
 # train/test method
 
 
-def train(model, epoch, criterion, optimizer, data_loader,file=sys.stdout):
+def train(model, epoch, criterion, optimizer, data_loader, file=sys.stdout):
     cuda_gpu = torch.cuda.is_available()
     model.train()
     total = 0
-    all=len(data_loader.dataset)
+    all = len(data_loader.dataset)
     for batch_idx, (data, target) in enumerate(data_loader):
         if cuda_gpu:
             data, target = data.cuda(), target.cuda()
@@ -110,15 +114,16 @@ def train(model, epoch, criterion, optimizer, data_loader,file=sys.stdout):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-        total+=data.shape[0]
+        total += data.shape[0]
         if total % (all/2) == 0:
-            if file!=sys.stdout:
+            if file != sys.stdout:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch,total, all, 100. * total / all, loss.data),file=file)
+                    epoch, total, all, 100. * total / all, loss.data), file=file)
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-            epoch,total, all, 100. * total / all, loss.data))
+                epoch, total, all, 100. * total / all, loss.data))
 
-def test(model, epoch, criterion, data_loader,file=sys.stdout):
+
+def test(model, epoch, criterion, data_loader, file=sys.stdout):
     cuda_gpu = torch.cuda.is_available()
     model.eval()
     test_loss = 0
@@ -128,7 +133,7 @@ def test(model, epoch, criterion, data_loader,file=sys.stdout):
             data, target = data.cuda(), target.cuda()
         data, target = Variable(data), Variable(target)
         with torch.no_grad():
-                output = model(data)
+            output = model(data)
         test_loss += criterion(output, target).data
         # get the index of the max log-probability
         pred = output.data.max(1)[1]
@@ -137,9 +142,9 @@ def test(model, epoch, criterion, data_loader,file=sys.stdout):
     # loss function already averages over batch size
     test_loss /= len(data_loader)
     acc = torch.true_divide(correct, len(data_loader.dataset))
-    if file!=sys.stdout:
+    if file != sys.stdout:
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
-            test_loss, correct, len(data_loader.dataset), 100. * acc),file=file)
+            test_loss, correct, len(data_loader.dataset), 100. * acc), file=file)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
         test_loss, correct, len(data_loader.dataset), 100. * acc))
     return (acc, test_loss)
