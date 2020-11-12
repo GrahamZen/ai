@@ -15,7 +15,7 @@ class lenet5(nn.Module):
             nn.Conv2d(in_channels=6, out_channels=16, kernel_size=3, stride=1
                       ),
             nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.BatchNorm2d(16),
+            # nn.BatchNorm2d(16),
             nn.Sigmoid()
         )
         self.l3 = nn.Sequential(

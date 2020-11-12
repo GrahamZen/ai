@@ -1,4 +1,4 @@
-# 期中project
+# 	期中project
 
 ## CNN
 
@@ -106,7 +106,7 @@ ResNet方法提出，若拟合的函数是$F(x)$，潜在的映射是$H(x)$，�
 
 ![../_images/resnet-block.svg](E:\workspace\ai\5_CNN\report\report.assets\resnet-block.svg)
 
-上图是普通的残差块，注意为了使得$F(x)+x$能够符合矩阵的加法条件，x需要经过处理，将通道数统一为$F(x)$的。
+上图是普通的残差块，注意为了使得$F(x)+x$能够符合矩阵的加法条件，x需要通过**shortcut**来变换，shortcut中的变换与$F$有关，如果$F$没有改变图像的大小，则**shortcut为恒等变换**；如果缩小为原来的一半，则shortcut需要进行一次**卷积**来缩小图像。
 
 残差块继承nn.Moudle类，
 
@@ -124,14 +124,14 @@ class ResidualBlock(nn.Module):
             conv3x3(outchannel, outchannel),
             nn.BatchNorm2d(num_features=outchannel)
         )
-        self.shortcut = nn.Sequential()
         if stride != 1 or inchannel != outchannel:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels=inchannel, out_channels=outchannel, 
                           kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(num_features=outchannel)
             )
-
+		else:
+	        self.shortcut = nn.Sequential()        
     def forward(self, x):
         out = self.left(x)
         out += self.shortcut(x)
@@ -140,11 +140,13 @@ class ResidualBlock(nn.Module):
 
 ```
 
-其中涉及到BatchNorm2d，该方法对一个batch的feature map的每个channel使用均值和方差（训练中通过学习得到）进行归一化。
+其中涉及到BatchNorm2d，称为**BN层**，该方法对一个batch的feature map的每个channel使用均值和方差（训练中通过学习得到）进行归一化。在ResNet中，每次卷积后都会通过一次BN层。
 
 ResNet论文中提及的种类如下，我使用的是ResNet18。
 
 ![image-20201110223059747](E:\workspace\ai\5_CNN\report\report.assets\image-20201110223059747.png)
+
+表格中有一点细节没有体现出来，就是conv2_x的部分，因为进行了stride = 2的max pool，图像的长宽已经缩小为原来的一半，因此conv2_x的两个residual_block的stride=1，剩下的残差块则是第一个residual_block的stride为2，第二个为1，这样就能每通过一组residual_block，图像长宽缩小为原来的一半。
 
 完整的ResNet结构如下：
 
@@ -248,17 +250,17 @@ LeNet-5预测错误的，肉眼也比较难识别，因为特征不够明显。
 
 变化非常明显，准确率和loss的下降都非常快，但是最终准确率没有明显提升。
 
-使用批规范化后，变化如下：
+加入BN层后，变化如下：
 
 ![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605080639391.svg)
 
-可以看到，loss下降的速度更快，但是最终的准确率没有很大的提升。
+可以看到，loss下降的速度更快，但是最终的准确率没有很大的提升，因为BN层对较深的网络会有较好的效果。
 
 修改卷积核的大小也会影响训练，将第一个卷积核的size设置为11，padding=5，训练时变化如下：
 
 ![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605085096208.svg)
 
-可以看到loss下降的速度也变快了，说明学习图像的大面积的特征有利于提高准确率，但是准确率依然是66%左右，应该是受限于网络的结构。
+可以看到loss下降的速度也变快了，说明学习图像的大面积的特征有利于提高准确率，但是准确率依然是66%左右，应该是受限于网络的结构特点，比如深度不足。
 
 #### ResNet
 
@@ -471,9 +473,8 @@ class lenet5(nn.Module):
 
 ## 参考
 
-resnet实现：https://pytorch.org/docs/0.4.0/_modules/torchvision/models/resnet.html
+* [1] [Source code for torchvision.models.resnet](https://pytorch.org/docs/0.4.0/_modules/torchvision/models/resnet.html)
 
-resnet模型：[arXiv:1512.03385](https://arxiv.org/abs/1512.03385) **[cs.CV]**
+* [2] [arXiv:1512.03385](https://arxiv.org/abs/1512.03385) **[cs.CV]**
 
-数据增强：https://blog.csdn.net/sunqiande88/article/details/80100891
-
+* [3] [Pytorch实战2：ResNet-18实现Cifar-10图像分类](https://blog.csdn.net/sunqiande88/article/details/80100891)
