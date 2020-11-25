@@ -1,6 +1,20 @@
-import heapq,re,time,enum,sys,math
+import heapq,re,time,enum,math
 import numpy as np
 import matplotlib.pyplot as plt
+
+def read_maze(filename):
+    with open(filename,'r',encoding='utf-8') as f:
+        maze=[]
+        for row,line in enumerate(f.readlines()):
+            line=line.strip()
+            s=line.find('S')
+            if (-1!=s):
+                start=(row,s)
+            e=line.find('E')
+            if (-1!=e):
+                end=(row,e)
+            maze.append(line)
+        return maze, start, end
 
 class node:
     """
