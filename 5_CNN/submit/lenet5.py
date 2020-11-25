@@ -5,24 +5,28 @@ class lenet5(nn.Module):
     def __init__(self,in_dim,n_class):
         super(lenet5, self).__init__()
         self.l1 = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=3, stride=1
+            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5, stride=1,padding=1
                       ),
             nn.MaxPool2d(kernel_size=2, stride=2),
             # nn.BatchNorm2d(6),
-            nn.Sigmoid()
+            nn.ReLU()
         ) 
         self.l2 = nn.Sequential(
-            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=3, stride=1
+            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1,padding=1
                       ),
             nn.MaxPool2d(kernel_size=3, stride=2),
             # nn.BatchNorm2d(16),
-            nn.Sigmoid()
+            nn.ReLU()
         )
         self.l3 = nn.Sequential(
             nn.Conv2d(in_channels=16, out_channels=120, kernel_size=3)
         ) 
         self.linear = nn.Sequential(
-            nn.Linear(1920, 10)
+            nn.Linear(1920, 120),
+            nn.ReLU(),
+            nn.Linear(120, 84),
+            nn.ReLU(),
+            nn.Linear(84, 10)
         )
 
     def forward(self, x):

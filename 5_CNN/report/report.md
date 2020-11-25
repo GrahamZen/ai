@@ -58,18 +58,10 @@ CNN的卷积方法还可以指定步长(stride)和填充值(padding)，前者可
 
 经过softmax层，输出结果最大的作为分类的预测结果。	
 
-#### LeNet-5
-
-LeNet-5使用了上面的几种隐层。
-
-
-
-![image-20201110153109392](E:\workspace\ai\5_CNN\report\report.assets\image-20201110153109392.png)
-
-代码如下：
+下面是一种CNN网络结构，
 
 ```python
-class lenet5(nn.Module):
+class CNN(nn.Module):
     def __init__(self,in_dim,n_class):
         super(lenet5, self).__init__()
         self.l1 = nn.Sequential(
@@ -99,6 +91,14 @@ class lenet5(nn.Module):
         output = self.linear(out3)
         return output
 ```
+
+#### LeNet-5
+
+LeNet-5使用了上面的几种隐层。
+
+![image-20201110153109392](E:\workspace\ai\5_CNN\report\report.assets\image-20201110153109392.png)
+
+
 
 #### ResNet
 
@@ -200,7 +200,7 @@ def ResNet34():
 
 ### 结果分析
 
-#### LeNet-5
+#### CNN
 
 经过一段时间的训练，准确率可以达到66%。
 
@@ -233,12 +233,13 @@ Test set: Average loss: 0.9699, Accuracy: 6634/10000 (66%)
 下面是一些测试结果，可以看到，
 
 <center class="half">
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163704069.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163746759.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163821574.png" width="300"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163704069.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163746759.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111163821574.png" width="180"/>
 </center>
 
-LeNet-5预测错误的，肉眼也比较难识别，因为特征不够明显。
+
+该模型预测错误的，肉眼也比较难识别，因为特征不够明显。
 
 训练的过程中，loss和accuracy变化如下：
 
@@ -261,6 +262,52 @@ LeNet-5预测错误的，肉眼也比较难识别，因为特征不够明显。
 ![lenet](E:\workspace\ai\5_CNN\report\report.assets\lenet-1605085096208.svg)
 
 可以看到loss下降的速度也变快了，说明学习图像的大面积的特征有利于提高准确率，但是准确率依然是66%左右，应该是受限于网络的结构特点，比如深度不足。
+
+#### LeNet-5
+
+经过200个epoch的训练，准确率可以达到76%。
+
+```powershell
+>>> from lenet5_train import *
+lenet5(
+  (l1): Sequential(
+    (0): Conv2d(3, 6, kernel_size=(5, 5), stride=(1, 1), padding=(1, 1))
+    (1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (2): ReLU()
+  )
+  (l2): Sequential(
+    (0): Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1), padding=(1, 1))
+    (1): MaxPool2d(kernel_size=3, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (2): ReLU()
+  )
+  (l3): Sequential(
+    (0): Conv2d(16, 120, kernel_size=(3, 3), stride=(1, 1))
+  )
+  (linear): Sequential(
+    (0): Linear(in_features=1920, out_features=120, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=120, out_features=84, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=84, out_features=10, bias=True)
+  )
+)
+>>> test(model, 1, nn.CrossEntropyLoss(), test_loader)
+
+Test set: Average loss: 0.6845, Accuracy: 7634/10000 (76%)
+(tensor(0.7634), tensor(0.6845, device='cuda:0'))
+```
+
+<center class="half">
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201112223734266.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201112223746630.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201112223758239.png" width="180"/>
+</center>
+
+可以看到，LeNet-5准确率虽然提升了，但是也不是特别高。
+
+训练过程中loss和accuracy的变化如下，可以看到，大约40个epoch的时候，就已经有较高的准确率，这是因为使用ReLu函数，能够提高收敛的速度。
+
+![lenet5](E:\workspace\ai\5_CNN\report\report.assets\lenet5.svg)
 
 #### ResNet
 
@@ -380,12 +427,13 @@ Test set: Average loss: 0.4529, Accuracy: 9203/10000 (92%)
 下面是一些例子，
 
 <center class="half">
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160131922.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160209488.png" width="300"/>
-    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160241232.png" width="300"/>    
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160131922.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160209488.png" width="180"/>
+    <img src="E:\workspace\ai\5_CNN\report\report.assets\image-20201111160241232.png" width="180"/>    
 </center>
 
-可以看到，LeNet-5预测错误的，ResNet基本没有预测错，准确率是非常高的。
+
+可以看到，LeNet-5预测错误的，ResNet基本没有预测错，准确率是非常高的。因为ResNet的残差层能够很好的发挥深层神经网络的性能。
 
 训练的过程中，loss和accuracy变化如下：
 
@@ -478,3 +526,95 @@ class lenet5(nn.Module):
 * [2] [arXiv:1512.03385](https://arxiv.org/abs/1512.03385) **[cs.CV]**
 
 * [3] [Pytorch实战2：ResNet-18实现Cifar-10图像分类](https://blog.csdn.net/sunqiande88/article/details/80100891)
+
+## RNN
+
+### 实验原理
+
+#### RNN
+
+RNN用于处理序列数据，与传统神经网络最大的区别在于它有记忆性，体现在隐藏层的值不仅取决于当前的输入，还取决于上一次隐藏层的值，公式表示为：
+$$
+S_t=\sigma(U\cdot X_t+W\cdot S_{t-1}+b_u)\\
+O_t=g(V\cdot S_t+b_v)\\
+a_t=C(O_t)
+$$
+
+$a_t$为最终的分类结果。$\sigma$一般使用Tanh函数。
+
+示意图如下：
+
+![RNN与LSTM之间的介绍和公式梳理_IT届的小学生-CSDN博客_rnn和lstm](E:\workspace\ai\5_CNN\report\report.assets\aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTgwMTA5MTU0NTI2Nzkz)
+
+#### LSTM
+
+由于RNN中有反向传播的连乘导致的梯度消失和梯度爆炸的问题，有人提出了LSTM，
+
+LSTM内部有三个阶段，
+
+1. 忘记阶段，选择性忘记不重要的，记住重要的。
+2. 选择记忆阶段
+3. 输出阶段
+
+示意图如下：
+
+![使用長短期記憶模型(LSTM)預測天氣（繁體）](E:\workspace\ai\5_CNN\report\report.assets\0127.png)
+
+其中有三个结构：
+
+##### 遗忘门
+
+$f_t$是通过sigmoid函数得到的结果，为0时会丢弃$c_{t-1}$中对应的信息，为1时保留。
+$$
+f_t=\sigma(h_{t-1}\cdot W_f+x_t\cdot U_f+b_f)
+$$
+
+##### 输入门
+
+输入门也采用sigmoid函数，对经过处理的$c_{t-1}$进行再处理，公式为：
+$$
+i_t=\sigma(h_{t-1}\cdot W_t+x_t\cdot U_i+b_i)\\
+\tilde c_t=\text{tanh}(h_{t-1}\cdot W_c+x_t\cdot U_c+b_c)\\
+c_t=f_t\odot c_{t-1}+i_t\odot\tilde c_t
+$$
+$\odot$代表Hadamard乘积
+
+##### 输出门
+
+输出门的计算公式如下：
+$$
+O_t=\sigma(h_{t-1}\cdot W_o+x_t\cdot U_o+b_u)\\
+$$
+预测结果为
+$$
+a_t=\sigma(O_t\odot\text{tanh}(c_t)\cdot V+b)
+$$
+
+##### 双向LSTM
+
+BiLSTM是在在LSTM的基础上使用BiRNN的思想搭建的网络。正向计算时，隐藏层的$s_t$ 与 $s_t－1$ 有关；反向计算时，隐藏层的 $s_t$ 与 $s_t＋1$ 有关。
+
+![Basic structure of the BLSTM network. The LSTM nets at the bottom... |  Download Scientific Diagram](E:\workspace\ai\5_CNN\report\report.assets\Basic-structure-of-the-BLSTM-network-The-LSTM-nets-at-the-bottom-indicate-the-forward.png)
+
+##### 条件随机场（Conditional Random Field）
+
+CRF 是一个序列化标注算法，通过定义条件概率来描述模型。
+
+首先介绍特征函数，对于自然语言，特征函数有四个自变量，
+
+1. 句子s
+2. i，代表第i个单词
+3. $l_i$，表示要评分的标注序列给第i个单词标注的词性
+4. $l_{i-1}$，表示要评分的标注序列给第i-1个单词标注的词性
+
+我们可以定义特征函数的集合，用集合中的特征函数对同一个标注序列的评分综合得到标注序列最终的评分。每个特征函数$f_j$有一个权重$\lambda_j$。只要有一个句子s，标注序列$l$，就可以进行打分。分数是对每个位置的单词每个特征函数输出的特征值的和。
+$$
+score(l|s)=\sum_{j=1}^{m}\sum_{i=1}^n\lambda_jf_j(s,i,l_i,l_{i-1})
+$$
+进行指数化和标准化，就可以得到概率值：
+$$
+p(l|s)=\frac{e^{score(l|s)}}{\sum_{l^{\prime}}e^{score(l^{\prime}|s)}}
+$$
+训练CRF模型，一般用最大似然方法作为损失函数。
+
+结合BiLSTM，就可以得到一个BiLSTM+CRF。

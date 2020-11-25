@@ -63,24 +63,4 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
 
-# %%训练
-epochs=200
-epoch=1 #训练
-# epoch=201 #不训练
-
-while epoch<=epochs:
-    print('Train Epoch: {}/{}:'.format(epoch,epochs))
-    for t in train_loaderList:
-        train(model,num_epoches,criterion,optimizer,t,log)
-    if(epoch%(1)==0):
-        acc, loss = test(model, 1, criterion, test_loader,log)
-    epoch+=1
-if epoch == epochs+1:
-    torch.save(model.state_dict(),PATH)
-    log.close()
-
-
-# %%测试
-test(model, 1, nn.CrossEntropyLoss(), test_loader)
-test_visual(model,'data/cifar-10-batches-py',meta,transform_test)
 
