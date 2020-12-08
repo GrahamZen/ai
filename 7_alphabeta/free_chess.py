@@ -130,7 +130,7 @@ def add_chess(screen,pos, playerType):
         for p in pos:
             add_chess(screen, p, playerType)
         return
-    field = human_pos if playerType == player.HUMAN else machine_pos
+    field = human_pos if playerType == player.HUMAN else ai_pos
     draw_chess(screen, pos, playerType)
     field.add(pos)
     curr_pos.add(pos)
@@ -170,7 +170,7 @@ def game_play():
     # draw_chess(screen,(5,5),player.HUMAN)
     # draw_chess(screen,(6,5),player.HUMAN)
     # curr_pos.update([(4, 5), (5, 6), (5, 5), (6, 5)])
-    # machine_pos.update([(4, 5), (5, 6)])
+    # ai_pos.update([(4, 5), (5, 6)])
     # human_pos.update([(5,5),(6,5)])
     game_loop(screen, chess_arr, turn)
 

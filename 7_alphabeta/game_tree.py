@@ -7,7 +7,7 @@ avail_pos = set()
 all_pos = set()
 curr_pos = set()
 human_pos = set()
-machine_pos = set()
+ai_pos = set()
 
 pattern_score = {
     (1, 1, 1, 1, 1): 99999999,
@@ -60,11 +60,17 @@ def OverBound(cell_num, pos):
 
 
 def PatternMatch(target_pos, visited, mine, opponent):
+    """
+    找出一个点周围6个子可能的模式
+    """
     match = []
+    # 遍历每个方向
     for dir in [(1, 0), (0, 1), (1, 1), (1, -1)]:
+        # 向前推五个棋子的位置
         for i in range(-5, 1):
             found_pattern = []
             found_pos = []
+            # 判断从起始位置开始的六个子的种类
             for j in range(0, 6):
                 tmp_pos = pos_add(target_pos, dir, i + j)
                 if tmp_pos in opponent or OverBound(cell_num, tmp_pos):
@@ -76,18 +82,19 @@ def PatternMatch(target_pos, visited, mine, opponent):
                 else:
                     found_pattern.append(0)
                     found_pos.append(tmp_pos)
+            # 匹配6个子的模式，找到模式则放入结果列表中，注意访问过的模式对应的棋子位置要存入集合中，避免多次统计，下面三个匹配过程都要检查是否访问过
             p6 = auto_reversed(pattern_score, tuple(found_pattern))
             found_set=set(found_pos)
             if p6 in pattern_score and not found_set.issubset(visited):
                 visited.update(found_set)
                 match.append(p6)
-
+            # 取出其中5个子进行5个子的模式的匹配
             p5 = auto_reversed(pattern_score, tuple(found_pattern[:-1]))
             found_set=set(found_pos[:-1])
             if p5 in pattern_score and not found_set.issubset(visited):
                 visited.update(found_set)
                 match.append(p5)
-
+            # 取出另一边的5个子进行匹配
             found_set=set(found_pos[1:])
             p5 = auto_reversed(pattern_score, tuple(found_pattern[1:]))
             if p5 in pattern_score and not found_set.issubset(visited):
@@ -98,11 +105,11 @@ def PatternMatch(target_pos, visited, mine, opponent):
 
 def get_matched(playerType):
     if playerType == player.HUMAN:
-        opponent = machine_pos
+        opponent = ai_pos
         mine = human_pos
     else:
         opponent = human_pos
-        mine = machine_pos
+        mine = ai_pos
     matched = []
     visited = set()
     for pos in mine:
@@ -115,7 +122,7 @@ def check_winner(pos, playerType):
     if playerType == player.HUMAN:
         search_area = human_pos
     elif playerType == player.AI:
-        search_area = machine_pos
+        search_area = ai_pos
     for dir in [(1, 0), (0, 1), (1, 1), (1, -1)]:
         for i in range(-4, 1):
             found_pattern = []
@@ -130,8 +137,24 @@ def check_winner(pos, playerType):
                 return found_pos
     return []
 
+def evaluate_single_point(pos, playerType):
+    score=0
+    if playerType == player.HUMAN:
+        opponent = ai_pos
+        mine = human_pos
+    else:
+        opponent = human_pos
+        mine = ai_pos
+    # 找出单个点周围可能存在的模式
+    matched = PatternMatch(pos,set(), mine, opponent)
+    matched = dict(Counter(matched))
+    # 根据模式计算分数
+    for pattern in matched:
+        score += pattern_score[pattern] * matched[pattern]
+    return score
+    
 
-def evaluate(human_matched, machine_matched, playerType=player.WINNER):
+def evaluate(human_matched, ai_matched, playerType=player.WINNER):
     """
     下一步为playerType下
     """
@@ -143,11 +166,11 @@ def evaluate(human_matched, machine_matched, playerType=player.WINNER):
         factor = 0
 
     human_score = 0
-    machine_score = 0
+    ai_score = 0
 
     if human_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return 9999999
-    if machine_matched.get((1, 1, 1, 1, 1), 0) > 0:
+    if ai_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return -9999999
     
     # if human_matched.get((0, 1, 1, 1, 1, 0), 0) > 0:
@@ -155,28 +178,28 @@ def evaluate(human_matched, machine_matched, playerType=player.WINNER):
         
     # if human_matched.get((0, 1, 1, 1, 1), 0) + human_matched.get((0, 1, 1, 1, 0), 0) > 1:
     #     return 9999999
-    # elif machine_matched.get((0, 1, 1, 1, 1, 0), 0) > 0:
+    # elif ai_matched.get((0, 1, 1, 1, 1, 0), 0) > 0:
     #     return -9999999
-    # elif machine_matched.get((0, 1, 1, 1, 1), 0) + machine_matched.get((0, 1, 1, 1, 0), 0) > 1:
+    # elif ai_matched.get((0, 1, 1, 1, 1), 0) + ai_matched.get((0, 1, 1, 1, 0), 0) > 1:
     #     return -9999999
 
     for pattern in human_matched:
         human_score += pattern_score[pattern]*human_matched[pattern]+factor*100
 
-    for pattern in machine_matched:
-        machine_score += pattern_score[pattern]*machine_matched[pattern]-factor*100
+    for pattern in ai_matched:
+        ai_score += pattern_score[pattern]*ai_matched[pattern]-factor*100
 
-    return human_score - machine_score
+    return human_score - ai_score
 
 
 
-def maxValue(lst_pos, depth, maxAlpha, minBeta):
+def maxValue(lst_pos, depth, alpha, beta):
     if depth == 0 or check_winner(lst_pos,player.AI):
         return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.HUMAN), (-1, -1)
-    currMaxAlpha = float('-inf')
     currBestPos = (-1, -1)
-    avail_pos = all_pos - curr_pos
+    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.HUMAN),reverse=True)
     for pos in avail_pos:
+        # 没有邻居则不考虑
         if not hasNeighbor(curr_pos, pos):
             continue
         # 假设在pos处下棋
@@ -184,11 +207,11 @@ def maxValue(lst_pos, depth, maxAlpha, minBeta):
         curr_pos.add(pos)
 
         # 计算最大值
-        currAlpha, _ = minValue(pos, depth - 1, maxAlpha, minBeta)
+        new_alpha, _ = minValue(pos, depth - 1, alpha, beta)
 
         # 若新的更大，则更新记录的最大值
-        if currMaxAlpha < currAlpha:
-            currMaxAlpha = currAlpha
+        if alpha < new_alpha:
+            alpha = new_alpha
             currBestPos = pos
 
         # 移除刚刚下的棋子
@@ -196,41 +219,40 @@ def maxValue(lst_pos, depth, maxAlpha, minBeta):
         curr_pos.remove(pos)
 
         # 剪枝
-        if currMaxAlpha > minBeta:
-            return currMaxAlpha, currBestPos
+        if alpha >= beta:
+            return alpha, currBestPos
         
-        # 更新当前节点的Alpha值，用于该节点其他分支的剪枝操作
-        if currMaxAlpha > maxAlpha:
-            maxAlpha = currMaxAlpha
-    return currMaxAlpha, currBestPos
+    return alpha, currBestPos
 
 
-def minValue(lst_pos, depth, maxAlpha, minBeta):
+def minValue(lst_pos, depth, alpha, beta):
     if depth == 0 or check_winner(lst_pos,player.HUMAN):
         return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.AI), (-1, -1)
     
-    currMinBeta = float('inf')
     currBestPos = (-1, -1)
-    avail_pos = all_pos - curr_pos
+    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.AI),reverse=True)
     for pos in avail_pos:
-            
+        # 没有邻居则不考虑
         if not hasNeighbor(curr_pos, pos):
             continue
-        machine_pos.add(pos)
+        # 假设在pos处下棋
+        ai_pos.add(pos)
         curr_pos.add(pos)
 
-        currBeta, _ = maxValue(pos, depth - 1, maxAlpha, minBeta)
-
-        if currMinBeta > currBeta:
-            currMinBeta = currBeta
+        # 计算最小值
+        new_beta, _ = maxValue(pos, depth - 1, alpha, beta)
+        
+        # 若新的更小，则更新记录的最小值
+        if beta > new_beta:
+            beta = new_beta
             currBestPos = pos
 
-        machine_pos.remove(pos)
+        # 移除刚刚下的棋子
+        ai_pos.remove(pos)
         curr_pos.remove(pos)
 
-        if currMinBeta < maxAlpha:
-            return currMinBeta, currBestPos
+        # 剪枝
+        if beta <= alpha:
+            return beta, currBestPos
 
-        if currMinBeta < minBeta:
-            minBeta = currMinBeta
-    return currMinBeta, currBestPos
+    return beta, currBestPos

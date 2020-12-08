@@ -86,7 +86,7 @@ def game_loop(screen, chess_arr, turn):
                 # 检查下的位置是否有效
                 if (draw_chess(screen, pos, player.AI)):
                     # 将棋子位置放入集合中
-                    machine_pos.add(pos)
+                    ai_pos.add(pos)
                     # 检查是否有玩家胜出，找出胜出的五个子
                     win_pos = check_winner(pos, player.AI)
                     
@@ -118,7 +118,7 @@ def add_chess(screen,pos, playerType):
         for p in pos:
             add_chess(screen, p, playerType)
         return
-    field = human_pos if playerType == player.HUMAN else machine_pos
+    field = human_pos if playerType == player.HUMAN else ai_pos
     draw_chess(screen, pos, playerType)
     field.add(pos)
     curr_pos.add(pos)
@@ -147,10 +147,14 @@ def game_play():
     for y in range(0, cell_size*cell_num, cell_size):
         pygame.draw.aaline(screen, (220, 220, 220), (0+space, y+space),
                         (cell_size*(cell_num-1)+space, y+space), 1)
-
-    add_chess(screen, [(4, 5), (5, 6), (6, 8), (8, 5), (8, 7), (3, 2), (8, 6), (8, 8), (7, 8), (9, 8), (6, 9), (5, 9), (7, 7)], player.AI)
-    add_chess(screen, [(5, 5), (6, 5), (6, 7), (7, 6), (5, 4), (4, 3), (6, 3), (8, 4), (8, 9), (5, 8), (10, 8), (5, 10), (7, 4)], player.HUMAN)
-
+    if turn == 1:
+        add_chess(screen, [(4, 5), (5, 6)], player.AI)
+        add_chess(screen, [(5, 5), (6, 5)], player.HUMAN)
+        
+    elif turn == 0:
+        add_chess(screen, [(4, 5), (5, 6)], player.HUMAN)
+        add_chess(screen, [(5, 5), (6, 5)], player.AI)
+        
     game_loop(screen, chess_arr, turn)
 
 

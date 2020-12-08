@@ -131,7 +131,7 @@ pattern_score = {
 
 ### 搜索策略
 
-搜索策略在minimax函数中实现，搜索时遍历棋盘上的每个可以下棋的位置，如果发现该位置的8邻域没有棋子，就跳过。最大玩家和最小玩家轮流搜索自己要下的位置，当深度为0时返回，当发现对方已经赢得比赛时，也返回。
+搜索策略在minimax函数中实现，搜索时遍历棋盘上的每个可以下棋的位置，如果发现该位置的8邻域没有棋子，就跳过。最大玩家和最小玩家轮流搜索自己要下的位置，为了加快搜索的速度，**按照棋面的分数对位置进行大到小排序**，当深度为0时返回，当发现对方已经赢得比赛时，也返回。
 
 ## 代码展示
 
@@ -139,9 +139,6 @@ pattern_score = {
 
 ```python
 class player(IntEnum):
-    """
-    docstring
-    """
     WINNER = 0
     AI = 1
     HUMAN = 2
@@ -182,7 +179,7 @@ if flag == 1 - turn:
     # 检查下的位置是否有效
     if (draw_chess(screen, pos, player.AI)):
         # 将棋子位置放入集合中
-        machine_pos.add(pos)
+        ai_pos.add(pos)
         # 检查是否有玩家胜出，找出胜出的五个子
         win_pos = check_winner(pos, player.AI)
 
@@ -208,10 +205,61 @@ if flag == 1 - turn:
                     turn=-1
 ```
 
-### 估值函数
+### 模式匹配函数
+
+模式匹配函数从一个点的某个方向前5个点到后5个点进行匹配，找出棋子序列后与上面所说的模式比对，存在则**不重复的**记录下来，最终返回。
 
 ```python
-def evaluate(human_matched, machine_matched, playerType=player.WINNER):
+def PatternMatch(target_pos, visited, mine, opponent):
+    """
+    找出一个点周围6个子可能的模式
+    """
+    match = []
+    # 遍历每个方向
+    for dir in [(1, 0), (0, 1), (1, 1), (1, -1)]:
+        # 向前推五个棋子的位置
+        for i in range(-5, 1):
+            found_pattern = []
+            found_pos = []
+            # 判断从起始位置开始的六个子的种类
+            for j in range(0, 6):
+                tmp_pos = pos_add(target_pos, dir, i + j)
+                if tmp_pos in opponent or OverBound(cell_num, tmp_pos):
+                    found_pattern.append(2)
+                    found_pos.append(tmp_pos)
+                elif tmp_pos in mine:
+                    found_pattern.append(1)
+                    found_pos.append(tmp_pos)
+                else:
+                    found_pattern.append(0)
+                    found_pos.append(tmp_pos)
+            # 匹配6个子的模式，找到模式则放入结果列表中，注意访问过的模式对应的棋子位置要存入集合中，避免多次统计，下面三个匹配过程都要检查是否访问过
+            p6 = auto_reversed(pattern_score, tuple(found_pattern))
+            found_set=set(found_pos)
+            if p6 in pattern_score and not found_set.issubset(visited):
+                visited.update(found_set)
+                match.append(p6)
+            # 取出其中5个子进行5个子的模式的匹配
+            p5 = auto_reversed(pattern_score, tuple(found_pattern[:-1]))
+            found_set=set(found_pos[:-1])
+            if p5 in pattern_score and not found_set.issubset(visited):
+                visited.update(found_set)
+                match.append(p5)
+            # 取出另一边的5个子进行匹配
+            found_set=set(found_pos[1:])
+            p5 = auto_reversed(pattern_score, tuple(found_pattern[1:]))
+            if p5 in pattern_score and not found_set.issubset(visited):
+                visited.update(found_set)
+                match.append(p5)
+    return match
+```
+
+### 评价函数
+
+评价函数使用上面描述的阵型的字典，先判断是否有胜者，然后根据字典计算总分返回。注意下一步的玩家不同，评价的结果也是不同的，比如对于双方都有一个冲四的情况，如果先手是AI，那应该直接下在冲四的阵型上取胜，也就是说自己的分数应该有更高的权重，但是如果AI是后手，那么看到有两个冲四，就输了，这时人类的阵型分数的权重更高。这样评价可以使得AI在该主动出击的时候主动出击。
+
+```python
+def evaluate(human_matched, ai_matched, playerType=player.WINNER):
     """
     下一步为playerType下
     """
@@ -223,35 +271,53 @@ def evaluate(human_matched, machine_matched, playerType=player.WINNER):
         factor = 0
 
     human_score = 0
-    machine_score = 0
-
+    ai_score = 0
+	# 胜利则直接返回结果，不计算其他阵型
     if human_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return 9999999
-    if machine_matched.get((1, 1, 1, 1, 1), 0) > 0:
+    if ai_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return -9999999
     for pattern in human_matched:
         human_score += pattern_score[pattern]*human_matched[pattern]+factor*100
 
-    for pattern in machine_matched:
-        machine_score += pattern_score[pattern]*machine_matched[pattern]-factor*100
+    for pattern in ai_matched:
+        ai_score += pattern_score[pattern]*ai_matched[pattern]-factor*100
 
-    return human_score - machine_score
+    return human_score - ai_score
 ```
 
+### 单点评价函数
 
+```python
+def evaluate_single_point(pos, playerType):
+    score=0
+    if playerType == player.HUMAN:
+        opponent = ai_pos
+        mine = human_pos
+    else:
+        opponent = human_pos
+        mine = ai_pos
+    # 找出单个点周围可能存在的模式
+    matched = PatternMatch(pos,set(), mine, opponent)
+    matched = dict(Counter(matched))
+    # 根据模式计算分数
+    for pattern in matched:
+        score += pattern_score[pattern] * matched[pattern]
+    return score
+```
 
 ### $Alpha-Beta$剪枝
 
-代码根据算法直接编写，get_matched函数根据玩家类型找出匹配的阵型列表，evaluate函数进行打分。
+代码根据算法直接编写，get_matched函数根据玩家类型找出匹配的阵型列表，evaluate函数进行打分。minimax算法是递归的，结束条件是游戏结束或到达最大深度。在遍历位置前，位置的列表要根据单点评价进行排序。
 
 ```python
-def maxValue(lst_pos, depth, maxAlpha, minBeta):
+def maxValue(lst_pos, depth, alpha, beta):
     if depth == 0 or check_winner(lst_pos,player.AI):
-        return evaluate(get_matched(player.HUMAN),get_matched(player.AI)), (-1, -1)
-    currMaxAlpha = float('-inf')
+        return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.HUMAN), (-1, -1)
     currBestPos = (-1, -1)
-    avail_pos = all_pos - curr_pos
+    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.HUMAN),reverse=True)
     for pos in avail_pos:
+        # 没有邻居则不考虑
         if not hasNeighbor(curr_pos, pos):
             continue
         # 假设在pos处下棋
@@ -259,11 +325,11 @@ def maxValue(lst_pos, depth, maxAlpha, minBeta):
         curr_pos.add(pos)
 
         # 计算最大值
-        currAlpha, _ = minValue(pos, depth - 1, maxAlpha, minBeta)
+        new_alpha, _ = minValue(pos, depth - 1, alpha, beta)
 
         # 若新的更大，则更新记录的最大值
-        if currMaxAlpha < currAlpha:
-            currMaxAlpha = currAlpha
+        if alpha < new_alpha:
+            alpha = new_alpha
             currBestPos = pos
 
         # 移除刚刚下的棋子
@@ -271,45 +337,77 @@ def maxValue(lst_pos, depth, maxAlpha, minBeta):
         curr_pos.remove(pos)
 
         # 剪枝
-        if currMaxAlpha > minBeta:
-            return currMaxAlpha, currBestPos
+        if alpha >= beta:
+            return alpha, currBestPos
         
-        # 更新当前节点的Alpha值，用于该节点其他分支的剪枝操作
-        if currMaxAlpha > maxAlpha:
-            maxAlpha = currMaxAlpha
-    return currMaxAlpha, currBestPos
+    return alpha, currBestPos
+
+
+def minValue(lst_pos, depth, alpha, beta):
+    if depth == 0 or check_winner(lst_pos,player.HUMAN):
+        return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.AI), (-1, -1)
+    
+    currBestPos = (-1, -1)
+    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.AI),reverse=True)
+    for pos in avail_pos:
+        # 没有邻居则不考虑
+        if not hasNeighbor(curr_pos, pos):
+            continue
+        # 假设在pos处下棋
+        ai_pos.add(pos)
+        curr_pos.add(pos)
+
+        # 计算最小值
+        new_beta, _ = maxValue(pos, depth - 1, alpha, beta)
+
+        # 若新的更小，则更新记录的最小值
+        if beta > new_beta:
+            beta = new_beta
+            currBestPos = pos
+
+        # 移除刚刚下的棋子
+        ai_pos.remove(pos)
+        curr_pos.remove(pos)
+
+        # 剪枝
+        if beta <= alpha:
+            return beta, currBestPos
+
+    return beta, currBestPos
 ```
-
-
 
 ## 实验结果以及分析
 
-下面是UCS算法对迷宫的运行结果，绿色线代表路径，黄色的为搜索过的路径，有颜色的点都是迷宫的可行点，蓝色为未被搜索的路径。可以看出，大部分路径都已经被搜索过了，效率比较低。打印的结果为：
+理论上只有AI需要知道各种棋面的分数，所以人类的分数我是单独打印的，评估函数按照客观玩家的角度输出分数。
 
-```
-空间复杂度:9, 时间复杂度:274
-```
+第一轮AI先手：
 
-![UCS](E:\workspace\ai\6_serach\report\17338233_zhenggehan_lab6.assets\UCS.svg)
+![image-20201208224216378](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224216378.png)
 
-# 思考题
+第一轮人类后手：
 
-## 策略的优缺点
+![image-20201208224226469](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224226469.png)
 
-| 策略 | 优点|缺点 |
-| ------------|------|------|
-| 一致代价搜索  | 保证完备性，最优性的前提下容易实现 | 空间复杂度较高，盲目搜索所以效率低 |
-| A*搜索        | 在一致代价搜索的基础上加入启发式函数，搜索速度较快 | 空间复杂度较高，且搜索速度取决于启发式函数的特点，而且有时候难以找到满足两个性质的启发式函数 |
-| 迭代加深搜索  | 空间复杂度低 | 深度是随迭代逐渐增加的，迭代重新搜索时已访问的点仍会被重新访问。开销不一致时需要满足一定条件才有最优性 |
-| IDA*          | 在迭代加深搜索的基础上加入启发式函数，搜索效率提高 | 和迭代加深搜索一样，有时候难以找到满足两个性质的启发式函数 |
-| 双向搜索      | 搜索深度减半，效率提高 | 需要维护两个边界集合，空间复杂度高 |
+第二轮AI先手：
 
-## 适用场景
+![image-20201208224232235](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224232235.png)
 
-| 策略 |适用场景 |
-| ------------|------------|
-| 一致代价搜索  | 预估搜索深度较低，或者对空间复杂度要求较低时比较适合，最短和最小问题 |
-| A*搜索        | 有较好的启发式函数，大致知道或者可以确定目标位置时 |
-| 迭代加深搜索  | 空间复杂度要求较高的场景 |
-| IDA*          | 空间复杂度要求较高，而且有较好的启发式函数，大致知道或者可以确定目标位置的场景 |
-| 双向搜索      | 已知终点和起点的场景 |
+第二轮人类后手
+
+![image-20201208224243341](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224243341.png)
+
+第三轮AI先手：
+
+![image-20201208224255263](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224255263.png)
+
+第三轮人类后手：
+
+![image-20201208224310497](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224310497.png)
+
+由于AI输出的是博弈树中搜索到的最小分数，而人类输出的是当前棋面的分数，因此AI的看起来会非常小。
+
+# 问题与思考
+
+本次实验因为算法有清晰的伪代码，所以实现并不困难，困难在于棋盘的评价函数，虽然有可以参考的阵型，但是实际上阵型是有无数种的，相同的阵型，阵型之外的棋子如果不同，在实战中也会有非常大的差别，比如两个以上的活二在接近的位置出现可以大概率在之后变为多个活三，从而直接取得胜利，但是活二单独出现时却几乎没有威胁。我使用的是只考虑6个棋子范围内的阵型，实际上有$3^6=729$种阵型，但是我只考虑其中几种，即便如此，深度为3的时候计算的也非常慢。
+
+限于深度，博弈树进行搜索的结果并不会考虑到一些阵型组合的效果，因为那需要双方各下若干轮才能发现。而搜索速度慢实际上是因为剪枝的不够多，剪枝的效果实际上和搜索的顺序有关，如果一开始就能搜到最优的路线，那么其他的分支就会被剪枝，因此还需要一些启发式的评估方法，然而实际上评价函数本身就是一个启发式的评估方法，因此可以在搜索前先对位置进行评价并排序，从评分最高的点开始搜索，就更容易找到最优路线，提高剪枝的概率。
