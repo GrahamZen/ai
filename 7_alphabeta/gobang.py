@@ -160,7 +160,7 @@ def game_play():
         add_chess(screen, [(4, 5), (5, 6)], player.HUMAN)
         add_chess(screen, [(5, 5), (6, 5)], player.AI)
     pygame.display.update()
-    human_record = [(6, 7),(7, 6),(5, 7),(4, 7),(3, 6),(8, 8),(5, 8)]
+    human_record = []
     game_loop(screen, chess_arr, turn,human_record)
 
 

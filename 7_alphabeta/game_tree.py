@@ -199,7 +199,10 @@ def maxValue(lst_pos, depth, alpha, beta):
     if depth == 0 or check_winner(lst_pos,player.AI):
         return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.HUMAN), (-1, -1)
     currBestPos = (-1, -1)
-    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.HUMAN),reverse=True)
+    if len(curr_pos) > 10:
+        avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.HUMAN),reverse=True)
+    else:
+        avail_pos=all_pos - curr_pos
     for pos in avail_pos:
         # 没有邻居则不考虑
         if not hasNeighbor(curr_pos, pos):
@@ -232,7 +235,11 @@ def minValue(lst_pos, depth, alpha, beta):
         return evaluate(get_matched(player.HUMAN),get_matched(player.AI),player.AI), (-1, -1)
     
     currBestPos = (-1, -1)
-    avail_pos = sorted(list(all_pos - curr_pos),key=lambda pos: evaluate_single_point(pos,player.AI),reverse=True)
+    if len(curr_pos) > 10:
+        avail_pos = sorted(list(all_pos - curr_pos), key=lambda pos: evaluate_single_point(pos, player.AI), reverse=True)
+    else:
+        avail_pos=all_pos - curr_pos
+    
     for pos in avail_pos:
         # 没有邻居则不考虑
         if not hasNeighbor(curr_pos, pos):
