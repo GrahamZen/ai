@@ -41,12 +41,12 @@ def show_winner(screen,winner):
     screen.blit(surface, (grid_size / 2-len(winner)*11, grid_size - 60))
     pygame.display.update()
 
-def game_loop(screen, chess_arr, turn):
+def game_loop(screen, chess_arr, turn, human_record=[]):
     font =  pygame.font.SysFont("Comic Sans MS",20)                
     flag = 1
     pos = (-1, -1)
     ai_v = 0
-    human_v=0
+    human_v = 0
     while True:
         
         for event in pygame.event.get():
@@ -54,10 +54,15 @@ def game_loop(screen, chess_arr, turn):
                 pygame.quit()
                 exit()
 
-            if flag == turn and event.type == pygame.MOUSEBUTTONUP:  # 鼠标弹起
-                x, y = pygame.mouse.get_pos()  # 获取鼠标位置
-                pos = get_board_index((x, y))
-                
+            if flag == turn:  # 鼠标弹起
+                if len(human_record) > 0:
+                    pos = human_record[0]  # 获取鼠标位置
+                    human_record=human_record[1:]
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    x, y = pygame.mouse.get_pos()  # 获取鼠标位置
+                    pos = get_board_index((x, y))
+                else:
+                    continue
                 if (draw_chess(screen, pos, player.HUMAN)):                
                     human_pos.add(pos)
                     win_pos = check_winner(pos, player.HUMAN)
@@ -82,7 +87,6 @@ def game_loop(screen, chess_arr, turn):
             if flag == 1 - turn:
                 # ai为最小玩家
                 ai_v, pos = minValue(pos, MAX_DEPTH, float('-inf'), float('inf'))
-                ai_v = round(ai_v, 3)
                 # 检查下的位置是否有效
                 if (draw_chess(screen, pos, player.AI)):
                     # 将棋子位置放入集合中
@@ -99,6 +103,7 @@ def game_loop(screen, chess_arr, turn):
                         turn=-1
                     curr_pos.add(pos)
                     print('ai:',pos)
+                    ai_v = round(evaluate(get_matched(player.HUMAN), get_matched(player.AI)), 3)
                     flag = 1 - flag
                     pygame.draw.rect(screen,BACKGROUND_COLOR,(0,0,grid_size,45),0)                
                     surface = font.render('AI\'s score:' + str(ai_v), True, (255, 200, 10))
@@ -154,8 +159,9 @@ def game_play():
     elif turn == 0:
         add_chess(screen, [(4, 5), (5, 6)], player.HUMAN)
         add_chess(screen, [(5, 5), (6, 5)], player.AI)
-        
-    game_loop(screen, chess_arr, turn)
+    pygame.display.update()
+    human_record = [(6, 7),(7, 6),(5, 7),(4, 7),(3, 6),(8, 8),(5, 8)]
+    game_loop(screen, chess_arr, turn,human_record)
 
 
 if __name__ == "__main__":

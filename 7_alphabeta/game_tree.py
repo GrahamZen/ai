@@ -1,7 +1,7 @@
 from collections import Counter
 from enum import IntEnum
 
-cell_num = 11
+cell_num = 22
 
 avail_pos = set()
 all_pos = set()
@@ -11,7 +11,7 @@ ai_pos = set()
 
 pattern_score = {
     (1, 1, 1, 1, 1): 99999999,
-    (0, 1, 1, 1, 1, 0): 10000,
+    (0, 1, 1, 1, 1, 0): 100000,
     (0, 1, 1, 0, 1, 0): 5000,
     (0, 1, 1, 1, 0): 1000,
     (0, 1, 1, 1, 1): 100,
@@ -171,23 +171,25 @@ def evaluate(human_matched, ai_matched, playerType=player.WINNER):
     if human_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return 9999999
     if ai_matched.get((1, 1, 1, 1, 1), 0) > 0:
-        return -9999999
-    
-    # if human_matched.get((0, 1, 1, 1, 1, 0), 0) > 0:
-    #     return 9999999
-        
-    # if human_matched.get((0, 1, 1, 1, 1), 0) + human_matched.get((0, 1, 1, 1, 0), 0) > 1:
-    #     return 9999999
-    # elif ai_matched.get((0, 1, 1, 1, 1, 0), 0) > 0:
-    #     return -9999999
-    # elif ai_matched.get((0, 1, 1, 1, 1), 0) + ai_matched.get((0, 1, 1, 1, 0), 0) > 1:
-    #     return -9999999
-
+        return - 9999999
+    sum = 0
+    if playerType==player.AI:
+        for pattern in human_matched:
+            if pattern_score[pattern] >= 100:
+                sum += 1
+        temp = human_matched.get((0, 1, 1, 1, 1, 0), 0)
+        human_matched[(0, 1, 1, 1, 1, 0)] = sum / 2 + temp
+    elif playerType==player.HUMAN:
+        for pattern in ai_matched:
+            if pattern_score[pattern] >= 100:
+                sum+=1
+        temp = ai_matched.get((0, 1, 1, 1, 1, 0), 0)
+        ai_matched[(0, 1, 1, 1, 1, 0)] = sum / 2 + temp
     for pattern in human_matched:
-        human_score += pattern_score[pattern]*human_matched[pattern]+factor*100
+        human_score += pattern_score[pattern]*human_matched[pattern]*(10**factor)
 
     for pattern in ai_matched:
-        ai_score += pattern_score[pattern]*ai_matched[pattern]-factor*100
+        ai_score += pattern_score[pattern]*ai_matched[pattern]*(10**(-factor))
 
     return human_score - ai_score
 

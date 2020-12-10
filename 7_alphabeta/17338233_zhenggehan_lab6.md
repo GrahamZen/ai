@@ -127,7 +127,9 @@ pattern_score = {
 }
 ```
 
-为AI和人类玩家分别计算各种阵型对应的分值之和，并且根据当前的玩家类型增加或扣除一定分数，然后返回。
+但是因为出现了阵型的组合的时候一个棋子并不能同时解决多个阵型，所以一些阵型的分数不可以线性组合，我认为分数高于100的阵型如果出现了组合是非常危险的，直接视为活四。
+
+进行这样的修改后，为AI和人类玩家分别计算各种阵型对应的分值之和，并且根据当前的玩家类型增加或扣除一定分数，然后返回。
 
 ### 搜索策略
 
@@ -165,7 +167,7 @@ def draw_chess(screen, pos, playerType):
         return False
 ```
 
-函数会检查下棋的位置是否合法，将检查结果返回
+函数会检查下棋的位置是否合法，将检查结果返回。
 
 ### 渲染循环
 
@@ -256,7 +258,7 @@ def PatternMatch(target_pos, visited, mine, opponent):
 
 ### 评价函数
 
-评价函数使用上面描述的阵型的字典，先判断是否有胜者，然后根据字典计算总分返回。注意下一步的玩家不同，评价的结果也是不同的，比如对于双方都有一个冲四的情况，如果先手是AI，那应该直接下在冲四的阵型上取胜，也就是说自己的分数应该有更高的权重，但是如果AI是后手，那么看到有两个冲四，就输了，这时人类的阵型分数的权重更高。这样评价可以使得AI在该主动出击的时候主动出击。
+评价函数使用上面描述的阵型的字典，先判断是否有胜者，然后根据字典计算总分返回。注意下一步的玩家不同，评价的结果也是不同的，比如对于双方都有一个冲四的情况，如果先手是AI，那应该直接下在冲四的阵型上取胜，也就是说自己的分数应该有更高的权重，但是如果AI是后手，那么看到有两个冲四，就输了，这时人类的阵型分数的权重更高。下一步的玩家的评分会有高十倍的权重。这样评价可以使得AI在该**主动出击**的时候主动出击。
 
 ```python
 def evaluate(human_matched, ai_matched, playerType=player.WINNER):
@@ -272,21 +274,36 @@ def evaluate(human_matched, ai_matched, playerType=player.WINNER):
 
     human_score = 0
     ai_score = 0
-	# 胜利则直接返回结果，不计算其他阵型
+
     if human_matched.get((1, 1, 1, 1, 1), 0) > 0:
         return 9999999
     if ai_matched.get((1, 1, 1, 1, 1), 0) > 0:
-        return -9999999
+        return - 9999999
+    sum = 0
+    if playerType==player.AI:
+        for pattern in human_matched:
+            if pattern_score[pattern] >= 100:
+                sum += 1
+        temp = human_matched.get((0, 1, 1, 1, 1, 0), 0)
+        human_matched[(0, 1, 1, 1, 1, 0)] = sum / 2 + temp
+    elif playerType==player.HUMAN:
+        for pattern in ai_matched:
+            if pattern_score[pattern] >= 100:
+                sum+=1
+        temp = ai_matched.get((0, 1, 1, 1, 1, 0), 0)
+        ai_matched[(0, 1, 1, 1, 1, 0)] = sum / 2 + temp
     for pattern in human_matched:
-        human_score += pattern_score[pattern]*human_matched[pattern]+factor*100
+        human_score += pattern_score[pattern]*human_matched[pattern]*(10**factor)
 
     for pattern in ai_matched:
-        ai_score += pattern_score[pattern]*ai_matched[pattern]-factor*100
+        ai_score += pattern_score[pattern]*ai_matched[pattern]*(10**(-factor))
 
     return human_score - ai_score
 ```
 
 ### 单点评价函数
+
+该函数用于对可下棋的位置进行排序，增大剪枝的概率。
 
 ```python
 def evaluate_single_point(pos, playerType):
@@ -378,36 +395,37 @@ def minValue(lst_pos, depth, alpha, beta):
 
 ## 实验结果以及分析
 
-理论上只有AI需要知道各种棋面的分数，所以人类的分数我是单独打印的，评估函数按照客观玩家的角度输出分数。
+理论上只有AI需要知道各种棋面的分数，因为人类的分数我是单独打印的，为了公平，AI也单独进行计算，评估函数按照客观玩家的角度输出分数。
 
 第一轮AI先手：
 
-![image-20201208224216378](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224216378.png)
+![image-20201210005914327](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210005914327.png)
 
 第一轮人类后手：
 
-![image-20201208224226469](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224226469.png)
+![image-20201210010016255](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210010016255.png)
 
 第二轮AI先手：
 
-![image-20201208224232235](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224232235.png)
+![image-20201210010134481](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210010134481.png)
 
 第二轮人类后手
 
-![image-20201208224243341](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224243341.png)
+![image-20201210010028933](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210010028933.png)
 
 第三轮AI先手：
 
-![image-20201208224255263](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224255263.png)
+![image-20201210010045661](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210010045661.png)
 
 第三轮人类后手：
 
-![image-20201208224310497](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201208224310497.png)
+![image-20201210010057207](E:\workspace\ai\7_alphabeta\17338233_zhenggehan_lab6.assets\image-20201210010057207.png)
 
-由于AI输出的是博弈树中搜索到的最小分数，而人类输出的是当前棋面的分数，因此AI的看起来会非常小。
+由于两个玩家都不断的封住对方的活三，分数一直只能统计到活二。
 
 # 问题与思考
 
-本次实验因为算法有清晰的伪代码，所以实现并不困难，困难在于棋盘的评价函数，虽然有可以参考的阵型，但是实际上阵型是有无数种的，相同的阵型，阵型之外的棋子如果不同，在实战中也会有非常大的差别，比如两个以上的活二在接近的位置出现可以大概率在之后变为多个活三，从而直接取得胜利，但是活二单独出现时却几乎没有威胁。我使用的是只考虑6个棋子范围内的阵型，实际上有$3^6=729$种阵型，但是我只考虑其中几种，即便如此，深度为3的时候计算的也非常慢。
+本次实验因为算法有清晰的伪代码，所以实现并不困难，困难在于棋盘的评价函数，虽然有可以参考的阵型，但是实际上阵型是有无数种的，相同的阵型，阵型之外的棋子如果不同，在实战中也会有非常大的差别，比如两个以上的活二在接近的位置出现可以大概率在之后变为多个活三，从而直接取得胜利，但是活二单独出现时却几乎没有威胁。我使用的是只考虑6个棋子范围内的阵型，实际上有$3^6=729$种阵型，但是我只考虑了比较有效的其中几种，即便如此，深度为3的时候计算的也非常慢。
 
 限于深度，博弈树进行搜索的结果并不会考虑到一些阵型组合的效果，因为那需要双方各下若干轮才能发现。而搜索速度慢实际上是因为剪枝的不够多，剪枝的效果实际上和搜索的顺序有关，如果一开始就能搜到最优的路线，那么其他的分支就会被剪枝，因此还需要一些启发式的评估方法，然而实际上评价函数本身就是一个启发式的评估方法，因此可以在搜索前先对位置进行评价并排序，从评分最高的点开始搜索，就更容易找到最优路线，提高剪枝的概率。
+
