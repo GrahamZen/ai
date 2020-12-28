@@ -1,7 +1,7 @@
 from collections import Counter
 from enum import IntEnum
 
-cell_num = 22
+cell_num = 11
 
 avail_pos = set()
 all_pos = set()

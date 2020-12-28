@@ -1,0 +1,10 @@
+.idea
+.ipynb*
+*pycache*
+*jpg
+*jpeg
+*MACOSX*
+logs
+.DS_store
+.vscode
+5_CNN/generated-notebook.ipynb
