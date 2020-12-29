@@ -1,6 +1,5 @@
 # -*- coding=utf-8 -*-
 from reversi import *
-from train import *
 import sys,pygame
 from pygame.locals import MOUSEBUTTONUP
 import pygame.gfxdraw
@@ -56,7 +55,7 @@ def game_update(screen, G,turn):
         draw_chess(screen,pos,color,True)
 
 
-def game_loop(screen, G,ai,turn):
+def game_loop(screen, G,turn):
     G.all_valid(turn)
     flag=turn
     game_update(screen, G,flag)
@@ -67,27 +66,32 @@ def game_loop(screen, G,ai,turn):
                 exit()
 
             if flag == turn:  # 鼠标弹起
-                pos=ai.select_action(G.state(),G,turn)
-                G.add_tensor(pos,flag)
-                flag = 3-flag
-                G.all_valid(flag)
-                if len(G.available) == 0:
-                    res = G.game_over()
-                    if res != 0 and res != 3:
-                        print(str(player(res)) + " win!")
-                        return
-                    if res == 3:
-                        print("draw game")
-                    print("no place to move")
-                    flag = 3 - flag
+                if event.type == pygame.MOUSEBUTTONUP:
+                    x, y = pygame.mouse.get_pos()  # 获取鼠标位置
+                    pos = get_board_index((x, y))
+                else:
+                    continue
+                if pos in G.available.keys():
+                    G.add_chess(pos,flag)
+                    flag = 3-flag
                     G.all_valid(flag)
-                game_update(screen,G,flag)
-                # pygame.draw.rect(screen,BACKGROUND_COLOR,(0,0,grid_size,45),0)
-                # surface = font.render('WHITE\'s score:' + str(ai_v), True, (255, 200, 10))
-                # screen.blit(surface,(30,15))
-                # surface = font.render('BLACK\'s score:' + str(human_v), True, (255, 200, 10))
-                # screen.blit(surface,(260,15))
-                pygame.display.update()
+                    if len(G.available) == 0:
+                        res = G.game_over()
+                        if res != 0:
+                            print(str(player(res)) + " win!")
+                            return
+                        print("no place to move")
+                        flag = 3 - flag
+                        G.all_valid(flag)
+                    game_update(screen,G,flag)
+                    # pygame.draw.rect(screen,BACKGROUND_COLOR,(0,0,grid_size,45),0)
+                    # surface = font.render('WHITE\'s score:' + str(ai_v), True, (255, 200, 10))
+                    # screen.blit(surface,(30,15))
+                    # surface = font.render('BLACK\'s score:' + str(human_v), True, (255, 200, 10))
+                    # screen.blit(surface,(260,15))
+                    pygame.display.update()
+                else:
+                    continue
 
             if flag == 3-turn:  # 鼠标弹起
                 if event.type == pygame.MOUSEBUTTONUP:
@@ -101,12 +105,9 @@ def game_loop(screen, G,ai,turn):
                     G.all_valid(flag)
                     if len(G.available) == 0:
                         res = G.game_over()
-                        if res != 0 and res!=3:
+                        if res != 0:
                             print(str(player(res)) + " win!")
                             return
-                        if res==3:
-                            print("draw game")
-
                         print("no place to move")
                         flag = 3 - flag
                         G.all_valid(flag)
@@ -125,21 +126,16 @@ def game_loop(screen, G,ai,turn):
 def game_play():
     g = game()
     if len(sys.argv)==2:
-        turn =int(sys.argv[1])
+        turn = int(sys.argv[1])
     else:
         turn =int(input('黑先手:1,白先手:2,请输入:'))
-    turn = player(turn)
+    turn=player(turn)
     pygame.init()
 
     screencaption = pygame.display.set_caption('黑白棋')
     screen = pygame.display.set_mode((grid_size, grid_size))  # 设置窗口长宽
     pygame.display.update()
-    ai=DQN(turn,True,"model_offensive1.pth","model_defensive1.pth",agent=Net)
-    # for p in ai.offensive.parameters():
-    #     print(p)
-    # for p in ai.defensive.parameters():
-    #     print(p)
-    game_loop(screen, g,ai,turn)
+    game_loop(screen, g, turn)
     tmp=input("press enter key to exit.")
 
 
