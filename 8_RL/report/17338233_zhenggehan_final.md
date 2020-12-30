@@ -1,4 +1,4 @@
-<center><font size="6">人工智能lab9实验报告</font></center>
+<center><font size="6">人工智能期末大作业实验报告</font></center>
 
 <center>学号：17338233      专业：计科     姓名：郑戈涵</center>
 
@@ -54,7 +54,7 @@ Loop for each episode:
 
 由于Q Learning需要使用表来记录每个状态每种动作的Q值，对于许多问题，状态个数太多，无法存储在表中，所以可以使用神经网络近似Q函数。伪代码如下：
 
-![img](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\v2-07095987f15891afb6290a0a27877fc4_1440w.jpg)
+![image-20201231004838893](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201231004838893.png)
 
 简单来说，Deep Q-learning需要两个网络，其中一个是目标网络，它滞后更新。先收集智能体与环境交互的信息，单条信息的形式为(状态，动作，奖励，下个状态)，然后采样一批信息并将信息中的状态交给目标网络。使用公式计算奖励的估计值并计算Q网络输出与估计值的loss，用于更新网络。
 
@@ -174,49 +174,210 @@ def reverse(self,curr_player,last_pos):
 
 ### DQN
 
-DQN是基于一个普通的神经网络实现的
+DQN有两个结构相同的神经网络，一个为目标网络，一个为最新的网络。
 
 #### AI
 
-网络的结构是参考他人效果比较好的网络，虽然自己也尝试了不少类型的网络，但是该网络效果
+网络的结构是参考他人效果比较好的网络的大体结构。输入的参数为当前的棋面，64*1的向量，输出是65维的向量，包括64个位置下棋的动作和无位置可下的1个动作。
 
 ```python
 class AI(nn.Module):
     def __init__(self):
         super(AI, self).__init__()
-        self.linear1 = nn.Sequential(
-            nn.Linear(STATE_CNT, 128),
-            nn.LeakyReLU()
-        )
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(1, 4, 3, 1, 1),
-            nn.LeakyReLU(inplace=True)
-        )
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(4, 8, 3, 1, 1),
-            nn.LeakyReLU()
-        )
-        self.linear2 = nn.Sequential(
-            nn.Linear(8 * 128, ACTION_CNT)
-        )
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=2, stride=1, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
+        self.fcl1 = nn.Linear(1296, 100)
+        self.fcl2 = nn.Linear(100, NUM_ACTIONS)
 
     def forward(self, x):
-        x = self.linear1(x)
-        x = x.view(x.shape[0], 1, -1)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = x.view(x.shape[0], -1)
-        x = self.linear2(x)
+        x = x.view(1,1,SIZE, SIZE)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = x.view(-1, 1296)
+        x = F.relu(self.fcl1(x))
+        x = self.fcl2(x)
         return x
-
 ```
 
+每个DQN只能学习一种下法，默认黑先白后，因此定义一个玩家枚举。
 
+```python
+class player(IntEnum):
+    BLACK=1
+    WHITE=2
+```
+
+DQN在实现神经网络的基础上，对两个网络进行参数的更新。记录自己下棋的结果transitions，里面有两个state，当前的和下一步的state，各有NUM_STATES(64)个，一个action，一个reward。
+
+```python
+class DQN(object):
+    def __init__(self,turn,load=False,PATH1="model_offensive.pth",PATH2="model_defensive.pth",agent=AI):
+        self.transitions = np.zeros((TRANSITION_CAP, 2 * NUM_STATES + 2))
+        self.transitions_i = 0
+        self.learn_iter = 0
+
+        self.Q, self.Q_ = agent(), agent()
+```
+
+#### 选择动作
+
+该函数的输入是当前状态，输出是即将执行的动作，首先将可下棋的位置转换为索引，然后以一定概率随机选择可下棋的位置来下棋，或者将当前状态传入神经网络，神经网络得到输出后，从输出中取出可下棋的位置的概率，将最大值对应的动作返回。
+
+```python
+def select_action(self, x, G, turn, eps=0.1):
+        G.all_valid(turn)
+        available_pos = G.available
+        if len(available_pos) == 0:
+            return 64
+        # 将可下棋的位置转为索引
+        available_pos = list(map(lambda pos: G.size * pos[0] + pos[1], available_pos))
+        if np.random.uniform() < eps:
+			# 随机选一个
+            action = np.random.choice(available_pos, 1)[0]
+        else:
+            x = torch.as_tensor(x, dtype=torch.float).view(1, -1).to(device)
+            # 传入网络
+            action_v = self.Q(x)[0]
+            ava_action = torch.as_tensor(action_v[available_pos])
+			# 取出最大的位置
+            _, action_i = torch.max(ava_action, 0)
+
+            action = available_pos[action_i]
+        return action
+```
+
+#### Replay Buffer
+
+对回放容量取余，就可以不断的更新有限容量的回放，用于网络学习。由于更新网络的公式根据下一局是否终止有不同，因此要进行记录。
+
+```python
+def store_transition(self, state, action, reward, succState,not_end=0):
+    self.transitions[self.transitions_i % TRANSITION_CAP] = np.hstack((state, action, reward, succState,not_end))
+    self.transitions_i += 1
+```
+
+#### 学习
+
+学习时是向对手的网络学习，因为自己无法取得下个状态的Q值。从回放中随机挑选一批，取出state,action,reward,下个state。将state传给网络，得到每个action对应的Q值，取出自己采取的action对应的Q值，再将下个state交给对手的网络，将对方的Q值取反当做自己的下个state的Q值，这样就可以使用DQN的公式进行更新了。
+
+每次学习时还要将目标网络进行更新。更新的函数有两种情况，对对方的网络的输出使用not_end作为掩码，才能正确的更新Q值。要注意的是tensor的类型要对应，否则会出现CUDA的异常错误。
+
+```python
+def learn(self, opponent):
+    self.Q_.load_state_dict(self.Q.state_dict())
+    for step in range(UPDATE_DELAY):
+        self.learn_iter += 1
+		# 随机选一批回放记录
+        sample_index = np.random.choice(TRANSITION_CAP, BATCH_SIZE)
+        trans_batch = self.transitions[sample_index, :]
+
+        state_batch = torch.as_tensor(trans_batch[:, :NUM_STATES], dtype=torch.float).to(device)
+        action_batch = torch.as_tensor(trans_batch[:, NUM_STATES:NUM_STATES + 1], dtype=int).to(device)
+        reward_batch = torch.as_tensor(trans_batch[:, NUM_STATES + 1:NUM_STATES + 2], dtype=torch.float).to(device)
+        succState_batch = torch.as_tensor(trans_batch[:, NUM_STATES + 2:-1], dtype=torch.float).to(device)
+        not_end=trans_batch[:,-1]
+        # 计算两个网络的y值
+        y1_batch = self.Q(state_batch).gather(1,action_batch).double()
+        oppo_Q_out = opponent(succState_batch).detach().max(1)[0].view(-1, 1)
+        # 对方网络的输出取反作为自己网络的Q值
+        y2_batch = reward_batch - GAMMA * oppo_Q_out.mul(torch.as_tensor(not_end).view(-1,1).to(device))
+        # 使用MSE作为loss函数
+        loss = self.criteria(y1_batch, y2_batch)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+    return loss
+```
+
+#### 训练
+
+训练是两个agent互相下棋的过程，每下一步棋都将当前状态的特征向量保存起来，如果积累了一定量的记录则可以进行学习。学习时使用的是对手的Q_网络。每下一步都要进行记录，同时要记录是否有胜利者，用于网络更新。
+
+```python
+def train():
+    offensive=DQN(player.BLACK)
+    defensive=DQN(player.WHITE)
+
+    for episode in range(EPISODE):
+        G=game()
+        roundo=0
+        roundd=0
+        while True:
+            state=G.state()
+            act=offensive.select_action(state,G,player.BLACK)
+            G.add_tensor(act,player.BLACK)
+            reward=reward_dict[G.game_over()]
+            succState=G.state()
+            if reward!=0:
+                offensive.store_transition(state,act,reward,succState,0)
+            else:
+                offensive.store_transition(state,act,reward,succState,1)
+            roundo+=1
+            if roundo > 100:
+                print('Episode:{} | loss:{}'.format(episode, offensive.learn(defensive.Q_)))
+                roundo=0
+                break
+
+            state=G.state()
+            act=defensive.select_action(state,G,player.WHITE)
+            G.add_tensor(act,player.WHITE)
+            reward = reward_dict[G.game_over()]
+            succState = G.state()
+
+            if reward!=0:
+                defensive.store_transition(state,act,reward,succState,0)
+            else:
+                defensive.store_transition(state,act,reward,succState,1)
+            roundd+=1
+            if roundd > 100:
+                print('Episode:{} | loss:{}'.format(episode, defensive.learn(offensive.Q_)))
+                roundd=0
+                break
+```
 
 ## 实验结果分析
 
+下面是经过10000个episode后得到的结果，与[4399](http://www.4399.com/flash/159743_1.htm)上的3星难度bot进行对局。AI是黑棋。
+
 ![image-20201230002147896](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201230002147896.png)
+
+可以明显看到，AI会主动下边缘的位置。
+
+下图是白棋后手，可以看到，左边的3明显是最优的位置
+
+![image-20201230184112571](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201230184112571.png)
+
+很快AI就选择了下左边的3。
+
+![image-20201230184149884](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201230184149884.png)
+
+同样，在下图中，上面的两个3都是很理想的位置。
+
+![image-20201230184257600](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201230184257600.png)
+
+很快AI就选择了在左边下棋，
+
+![image-20201230184347262](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201230184347262.png)
+
+对于下面的局面，右边的2对白棋稍有优势，因此白棋也选择下这里。
+
+![image-20201231001742991](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201231001742991.png)
+
+![image-20201231001825824](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201231001825824.png)
+
+下图的局面下，同样是吃三个子，右上角明显更重要，因此AI选择下角落。
+
+![image-20201231002129104](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201231002129104.png)
+
+![image-20201231002219460](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\image-20201231002219460.png)
+
+虽然对部分棋面AI并不能做最优的动作，但是经过很长时间的训练，AI已经对较为重要的动作有一定的了解。
 
 # 问题与思考
 
+本次实验结合minmax的方法，为DQN提供了计算Q网络对下一状态Q值的模拟。
 
+实际上DQN作为TD的方法，对于棋类游戏并非最优，因为对于难以获得很好的评价函数的棋类游戏，往往要到游戏结束才能得到奖励，对于学习是不方便的，这也导致DQN的训练非常慢，短时间内不会得到很好的模型，并且loss一直在波动，因为一旦学到一个新局面的有利动作，Q网络的MSE就会增大，然后再逐渐减小。总体上能力是螺旋上升的。
+
+![train](E:\workspace\ai\8_RL\report\17338233_zhenggehan_final.assets\train.svg)
+
+MCTS是一个比较适合棋类的方法，可以通过少量的模拟得到较好的结果，利用深度神经网络结合策略梯度来选择走MCTS的分支，可以得到非常好的决策结果，但是模型也会更复杂，方差也比较大。如果对黑白棋的规则足够熟悉，利用评价函数来指导学习是更快捷的方法。

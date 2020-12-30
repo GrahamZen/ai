@@ -8,3 +8,4 @@ logs
 .DS_store
 .vscode
 5_CNN/generated-notebook.ipynb
+*pth

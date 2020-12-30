@@ -73,11 +73,8 @@ def game_loop(screen, G,ai,turn):
                 G.all_valid(flag)
                 if len(G.available) == 0:
                     res = G.game_over()
-                    if res != 0 and res != 3:
-                        print(str(player(res)) + " win!")
-                        return
-                    if res == 3:
-                        print("draw game")
+                    if res != 0:
+                        return res
                     print("no place to move")
                     flag = 3 - flag
                     G.all_valid(flag)
@@ -101,9 +98,8 @@ def game_loop(screen, G,ai,turn):
                     G.all_valid(flag)
                     if len(G.available) == 0:
                         res = G.game_over()
-                        if res != 0 and res!=3:
-                            print(str(player(res)) + " win!")
-                            return
+                        if res != 0:
+                            return res
                         if res==3:
                             print("draw game")
 
@@ -122,6 +118,16 @@ def game_loop(screen, G,ai,turn):
 
         pygame.display.update()
 
+def show_winner(screen,winner):
+    if winner==3:
+        winner="draw game"
+    else:
+        winner=str(player(winner)).split('.')[1] +' win!'
+    font =  pygame.font.SysFont("Comic Sans MS",40)
+    surface = font.render(winner, True, (152,251,152))
+    screen.blit(surface, (grid_size / 2-len(winner)*11, grid_size - 60))
+    pygame.display.update()
+
 def game_play():
     g = game()
     if len(sys.argv)==2:
@@ -134,14 +140,18 @@ def game_play():
     screencaption = pygame.display.set_caption('黑白棋')
     screen = pygame.display.set_mode((grid_size, grid_size))  # 设置窗口长宽
     pygame.display.update()
-    ai=DQN(turn,True,"model_offensive1.pth","model_defensive1.pth",agent=Net)
-    # for p in ai.offensive.parameters():
-    #     print(p)
-    # for p in ai.defensive.parameters():
-    #     print(p)
-    game_loop(screen, g,ai,turn)
-    tmp=input("press enter key to exit.")
-
+    path = input("model path:")
+    if len(path)!=0:
+        ai = DQN(turn,True,path,path,agent=NET)
+    else:
+        ai = DQN(turn, True, agent=NET)
+    res = game_loop(screen, g,ai,turn)
+    show_winner(screen,res)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
 
 if __name__ == "__main__":
     game_play()

@@ -154,3 +154,7 @@ class game(object):
         for n in range(self.size):
             print('  {} '.format(n), end='')
         print('\n\n')
+
+def edge_dist(pos):
+    (x, y) = (pos // SIZE, pos % SIZE)
+    return min(SIZE-x,x)+min(SIZE-y,y)
